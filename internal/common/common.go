@@ -33,14 +33,39 @@ func (e *FieldError) Error() string {
 // TODO: сохраните порядок пользователей. Формат результата:
 // "active=<количество> names=<имя1>,<имя2>".
 // Если активных пользователей нет, верните "" и ErrNoActiveUsers.
-func ActiveUserReport(users []User) (string, error) { return "", nil }
+func ActiveUserReport(users []User) (string, error) {
+	count := 0
+	names := ""
+	for _, user := range users {
+		if user.Active {
+			if count > 0 {
+				names += ","
+			}
+			names += user.Name
+			count++
+		}
+	}
+	if count == 0 {
+		return "", ErrNoActiveUsers
+	}
+	return fmt.Sprintf("active=%d names=%s", count, names), nil
+}
 
 // 02. DiscountOrder возвращает копию заказа со скидкой.
 //
 // TODO: Amount не может быть отрицательным, percent должен быть от 0 до 100.
 // Для некорректного поля верните *FieldError с Field "amount" или "percent".
 // Исходный order не изменяйте. Вычисления выполняются целыми числами.
-func DiscountOrder(order Order, percent int) (Order, error) { return Order{}, nil }
+func DiscountOrder(order Order, percent int) (Order, error) {
+	if order.Amount < 0 {
+		return Order{}, &FieldError{Field: "amount", Reason: "must not be negative"}
+	}
+	if percent < 0 || percent > 100 {
+		return Order{}, &FieldError{Field: "percent", Reason: "must be between 0 and 100"}
+	}
+	order.Amount = order.Amount * (100 - percent) / 100
+	return order, nil
+}
 
 // 03. AppendToIsolatedWindow создаёт окно items[low:high] с ограниченной
 // capacity и добавляет values.
@@ -49,5 +74,10 @@ func DiscountOrder(order Order, percent int) (Order, error) { return Order{}, ni
 // При неверных границах верните ошибку и nil-слайсы.
 // При корректных границах исходный items не должен измениться из-за append.
 func AppendToIsolatedWindow(items []int, low, high int, values ...int) (source, window []int, err error) {
-	return nil, nil, nil
+	if low < 0 || low > high || high > len(items) {
+		return nil, nil, fmt.Errorf("invalid bounds: low=%d high=%d len=%d", low, high, len(items))
+	}
+	window = items[low:high:high]
+	window = append(window, values...)
+	return items, window, nil
 }
